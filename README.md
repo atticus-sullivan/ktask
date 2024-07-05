@@ -4,7 +4,7 @@ Ktask is a [kanban](https://en.wikipedia.org/wiki/Kanban_board) based todo-list
 using a plain-text format to store data and use a TUI (terminal user interface)
 to show the kanban board.
 
-<img src="assets/demo.gif" width="400" height="790">
+<img src="assets/demo.gif" width="1000">
 
 ## Plain-text format
 The plain-text format (as well as the parsing of it) is heavily inspired by the
