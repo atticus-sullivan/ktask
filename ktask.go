@@ -53,15 +53,15 @@ func exists(path string) bool {
 	return true
 }
 
-func readData(path string) ([]ktask.Record, Error) {
-	if exists(filepath.Join(path, ".tasks.ktask.lock")) {
+func readData(source string) ([]ktask.Record, Error) {
+	lock := source + ".lock"
+	if exists(lock) {
 		return nil, NewError(
 			"Lock file exists",
-			filepath.Join(path, ".tasks.ktask.lock"),
+			lock,
 			errors.New("file exists"),
 		)
 	}
-	source := filepath.Join(path, "tasks.ktask")
 	content, err := os.ReadFile(source)
 	if err != nil {
 		return nil, NewErrorWithCode(
@@ -71,7 +71,7 @@ func readData(path string) ([]ktask.Record, Error) {
 			err,
 		)
 	}
-	f, err := os.Create(filepath.Join(path, ".tasks.ktask.lock"))
+	f, err := os.Create(lock)
 	if err == nil {
 		f.Close()
 	}
@@ -83,8 +83,9 @@ func readData(path string) ([]ktask.Record, Error) {
 	return records, nil
 }
 
-func writeData(path string, data []ktask.Record) Error {
+func writeData(destination string, data []ktask.Record) Error {
 	var err error
+	lock := destination + ".lock"
 
 	ser := NewSerialiser(tf.NewStyler(tf.COLOUR_THEME_NO_COLOUR), false)
 	lines := parser.SerialiseRecords(ser, data...)
@@ -95,7 +96,6 @@ func writeData(path string, data []ktask.Record) Error {
 		content.WriteRune('\n')
 	}
 
-	destination := filepath.Join(path, "tasks.ktask")
 	err = os.WriteFile(destination, []byte(content.String()), 0777)
 	if err != nil {
 		return NewErrorWithCode(
@@ -105,7 +105,7 @@ func writeData(path string, data []ktask.Record) Error {
 			err,
 		)
 	}
-	os.Remove(filepath.Join(path, ".tasks.ktask.lock"))
+	os.Remove(lock)
 	return nil
 }
 
@@ -113,20 +113,26 @@ type rootCmd struct {
 	Kanban *argKanban `arg:"subcommand:kanban"`
 }
 
-type argKanban struct{}
+type argKanban struct {
+	File string `arg:"positional"`
+}
 
 func main() {
-
 	var args rootCmd
 	arg.MustParse(&args)
 
-	data, err := readData(setupPath())
-	if err != nil {
-		panic(err)
-	}
-
 	switch {
 	case args.Kanban != nil:
+		var err error
+		path := args.Kanban.File
+		if path == "" {
+			path = filepath.Join(setupPath(), "tasks.ktask")
+		}
+		data, err := readData(path)
+		if err != nil {
+			panic(err)
+		}
+
 		var cols []kanban.Column
 		for i, r := range data {
 			cols = append(cols, kanban.NewColumnFromRecord(r, i == 0))
@@ -150,10 +156,10 @@ func main() {
 			r.SetEntries(kanban.ItemsToTasks(c.List.Items()))
 			data = append(data, r)
 		}
-	}
 
-	err = writeData(setupPath(), data)
-	if err != nil {
-		panic(err)
+		err = writeData(path, data)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
