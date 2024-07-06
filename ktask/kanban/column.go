@@ -21,10 +21,12 @@ type Column struct {
 }
 
 func (c *Column) Focus() {
+	c.List.SetShowHelp(true)
 	c.focus = true
 }
 
 func (c *Column) Blur() {
+	c.List.SetShowHelp(false)
 	c.focus = false
 }
 
@@ -35,7 +37,7 @@ func (c *Column) Focused() bool {
 // NewColumn creates a new column from a list.
 func NewColumn(l []list.Item, focus bool) Column {
 	defaultList := list.New(l, list.NewDefaultDelegate(), 0, 0)
-	defaultList.SetShowHelp(false)
+	defaultList.SetShowHelp(focus)
 	return Column{focus: focus, List: defaultList}
 }
 
@@ -45,8 +47,14 @@ func NewColumnFromRecord(r ktask.Record, focus bool) Column {
 		focus: focus,
 		List:  list.New(items, list.NewDefaultDelegate(), 0, 0),
 	}
-	ret.List.SetShowHelp(false)
+	ret.List.SetShowHelp(focus)
 	ret.List.Title = string(r.Stage())
+
+	km := &ret.List.KeyMap
+	km.CloseFullHelp.Unbind()
+	km.ShowFullHelp.Unbind()
+	km.Quit.Unbind()
+
 	return ret
 }
 
@@ -64,28 +72,30 @@ func (c Column) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		c.setSize(msg.Width, msg.Height)
 	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, keys.Edit):
-			if len(c.List.VisibleItems()) != 0 {
-				item := c.List.SelectedItem().(list.DefaultItem)
-				f := NewForm(item.Title(), item.Description())
-				f.title.SetValue(item.Title())
-				f.description.SetValue(item.Description())
-				f.index = c.List.Index()
+		if !c.List.SettingFilter() {
+			switch {
+			case key.Matches(msg, keys.Edit):
+				if len(c.List.VisibleItems()) != 0 {
+					item := c.List.SelectedItem().(list.DefaultItem)
+					f := NewForm(item.Title(), item.Description())
+					f.title.SetValue(item.Title())
+					f.description.SetValue(item.Description())
+					f.index = c.List.Index()
+					f.col = c
+					return f.Update(nil)
+				}
+			case key.Matches(msg, keys.New):
+				f := newDefaultForm()
+				f.index = APPEND
 				f.col = c
 				return f.Update(nil)
+			case key.Matches(msg, keys.Delete):
+				return c, c.DeleteCurrent()
+			case key.Matches(msg, keys.Prev):
+				return c, c.MoveToPrev()
+			case key.Matches(msg, keys.Next):
+				return c, c.MoveToNext()
 			}
-		case key.Matches(msg, keys.New):
-			f := newDefaultForm()
-			f.index = APPEND
-			f.col = c
-			return f.Update(nil)
-		case key.Matches(msg, keys.Delete):
-			return c, c.DeleteCurrent()
-		case key.Matches(msg, keys.Prev):
-			return c, c.MoveToPrev()
-		case key.Matches(msg, keys.Next):
-			return c, c.MoveToNext()
 		}
 	}
 	c.List, cmd = c.List.Update(msg)
@@ -116,25 +126,24 @@ func (c *Column) Set(i int, item list.Item) tea.Cmd {
 
 func (c *Column) setSize(width, height int) {
 	s := c.getStyle()
-	h, v := s.GetHorizontalBorderSize(), s.GetVerticalFrameSize()
-	help := c.board.help
-	help.ShowAll = true
-	help_h := lipgloss.Height(help.View(keys))
-	c.width, c.height = width/int(c.cnt)-h, height-v-help_h
-	c.List.SetSize(c.width, c.height)
+	hb, vb := s.GetHorizontalBorderSize(), s.GetVerticalBorderSize()
+	hp, vp := s.GetHorizontalPadding(), s.GetVerticalPadding()
+	help_h := lipgloss.Height(c.board.help.View(keys))
+	c.width, c.height = width/int(c.cnt)-hp, height-help_h-vp
+	c.List.SetSize(c.width-hb, c.height-vb)
 }
 
 func (c *Column) getStyle() lipgloss.Style {
 	if c.Focused() {
 		return lipgloss.NewStyle().
-			Padding(1, 2).
+			Padding(1).
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(lipgloss.Color("62")).
 			Height(c.height).
 			Width(c.width)
 	}
 	return lipgloss.NewStyle().
-		Padding(1, 2).
+		Padding(1).
 		Border(lipgloss.HiddenBorder()).
 		Height(c.height).
 		Width(c.width)

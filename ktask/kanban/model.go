@@ -15,6 +15,7 @@ type Board struct {
 	Focused  int
 	Cols     []Column
 	quitting bool
+	lastWin  tea.WindowSizeMsg
 }
 
 type focus int
@@ -49,6 +50,7 @@ func (m *Board) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
+		m.lastWin = msg
 		m.help.Width = msg.Width - margin
 		for i := 0; i < len(m.Cols); i++ {
 			var res tea.Model
@@ -61,20 +63,26 @@ func (m *Board) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case MoveMsg:
 		cmds = append(cmds, m.Cols[mod((m.Focused+msg.direction), len(m.Cols))].Set(APPEND, msg.item))
 	case tea.KeyMsg:
-		switch {
-		case key.Matches(msg, keys.Help):
-			m.help.ShowAll = !m.help.ShowAll
-		case key.Matches(msg, keys.Quit):
-			m.quitting = true
-			return m, tea.Quit
-		case key.Matches(msg, keys.Left):
-			m.Cols[m.Focused].Blur()
-			m.Focused = mod((m.Focused - 1), len(m.Cols))
-			m.Cols[m.Focused].Focus()
-		case key.Matches(msg, keys.Right):
-			m.Cols[m.Focused].Blur()
-			m.Focused = mod((m.Focused + 1), len(m.Cols))
-			m.Cols[m.Focused].Focus()
+		if !m.Cols[m.Focused].List.SettingFilter() {
+			switch {
+			case key.Matches(msg, keys.Help):
+				m.help.ShowAll = !m.help.ShowAll
+				// TODO request window size once again would be nicer
+				res, c := m.Update(m.lastWin)
+				cmds = append(cmds, c)
+				return res, tea.Batch(cmds...)
+			case key.Matches(msg, keys.Quit):
+				m.quitting = true
+				return m, tea.Quit
+			case key.Matches(msg, keys.Left):
+				m.Cols[m.Focused].Blur()
+				m.Focused = mod((m.Focused - 1), len(m.Cols))
+				m.Cols[m.Focused].Focus()
+			case key.Matches(msg, keys.Right):
+				m.Cols[m.Focused].Blur()
+				m.Focused = mod((m.Focused + 1), len(m.Cols))
+				m.Cols[m.Focused].Focus()
+			}
 		}
 	}
 	res, cmd := m.Cols[m.Focused].Update(msg)
