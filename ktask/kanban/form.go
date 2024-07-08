@@ -17,6 +17,8 @@ type Form struct {
 	help        help.Model
 	title       textinput.Model
 	description textarea.Model
+	createdAt   time.Time
+	modifiedAt  time.Time
 	col         Column
 	index       int
 	totalWidth  int
@@ -24,14 +26,16 @@ type Form struct {
 }
 
 func newDefaultForm() *Form {
-	return NewForm("task name", "")
+	return NewForm("task name", "", time.Now(), time.Now())
 }
 
-func NewForm(title, description string) *Form {
+func NewForm(title, description string, createdAt time.Time, modifiedAt time.Time) *Form {
 	form := Form{
 		help:        help.New(),
 		title:       textinput.New(),
 		description: textarea.New(),
+		createdAt:   createdAt,
+		modifiedAt:  modifiedAt,
 	}
 
 	form.title.Width = 10
@@ -76,7 +80,7 @@ func (f Form) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					sep = " "
 				}
-				item := ktask.NewEntry(ktask.Name(strings.Split(tag+sep+f.title.Value(), "\n")), time.Now(), time.Now(), f.index)
+				item := ktask.NewEntry(ktask.Name(strings.Split(tag+sep+f.title.Value(), "\n")), f.createdAt, f.modifiedAt, f.index)
 				return f.col.board.Update(item)
 			}
 			return f.col.board, nil

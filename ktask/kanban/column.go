@@ -2,6 +2,7 @@ package kanban
 
 import (
 	"ktask/ktask"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -76,8 +77,8 @@ func (c Column) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch {
 			case key.Matches(msg, keys.Edit):
 				if len(c.List.VisibleItems()) != 0 {
-					item := c.List.SelectedItem().(list.DefaultItem)
-					f := NewForm(item.Title(), item.Description())
+					item := c.List.SelectedItem().(ktask.Entry)
+					f := NewForm(item.Title(), item.Description(), item.CreatedAt(), time.Now())
 					f.title.SetValue(item.Title())
 					f.description.SetValue(item.Description())
 					f.index = c.List.Index()
