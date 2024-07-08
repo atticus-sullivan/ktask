@@ -37,6 +37,10 @@ func (e *Entry) ModifiedAt() time.Time {
 	return e.modifiedAt
 }
 
+func (e *Entry) SetModified() {
+	e.modifiedAt = time.Now()
+}
+
 func (e Entry) FilterValue() string {
 	builder := strings.Builder{}
 

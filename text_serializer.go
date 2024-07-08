@@ -22,7 +22,7 @@ func NewSerialiser(styler tf.Styler, decimal bool) TextSerialiser {
 }
 
 func (cs TextSerialiser) Date(d time.Time) string {
-	return cs.Styler.Props(tf.StyleProps{Color: tf.TEXT, IsUnderlined: true}).Format(d.Format("2006-02-01"))
+	return cs.Styler.Props(tf.StyleProps{Color: tf.TEXT, IsUnderlined: true}).Format(d.Format("2006-01-02"))
 }
 
 func (cs TextSerialiser) Stage(d ktask.Stage) string {

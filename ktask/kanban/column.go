@@ -119,10 +119,13 @@ func (c *Column) DeleteCurrent() tea.Cmd {
 
 // Set adds an item to a column.
 func (c *Column) Set(i int, item list.Item) tea.Cmd {
+	itemEntry := item.(ktask.Entry)
+	itemEntry.SetModified()
+
 	if i != APPEND {
-		return c.List.SetItem(i, item)
+		return c.List.SetItem(i, itemEntry)
 	}
-	return c.List.InsertItem(APPEND, item)
+	return c.List.InsertItem(APPEND, itemEntry)
 }
 
 func (c *Column) setSize(width, height int) {
