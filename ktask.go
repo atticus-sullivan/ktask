@@ -7,6 +7,7 @@ import (
 	"ktask/ktask/parser"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	arg "github.com/alexflint/go-arg"
@@ -114,7 +115,8 @@ type rootCmd struct {
 }
 
 type argKanban struct {
-	File string `arg:"positional"`
+	File string   `arg:"positional" help:"specify the file that should be read from / written to"`
+	Tags []string `arg:"--tags,-t,separate" help:"if set, only entries with this/these tags will be shown, may be specified multiple times"`
 }
 
 func main() {
@@ -133,8 +135,25 @@ func main() {
 			panic(err)
 		}
 
+		var data_shown []ktask.Record
+		var data_hidden []ktask.Record
+		if len(args.Kanban.Tags) == 0 {
+			data_shown = data
+		} else {
+			for _, i := range data {
+				r1, r2 := i.SplitOnFunc(func(e *ktask.Entry) bool {
+					return slices.ContainsFunc(args.Kanban.Tags, func(s string) bool {
+						t, _ := ktask.NewTagFromString(s)
+						return e.Name().Tags().Contains(t)
+					})
+				})
+				data_shown = append(data_shown, r1)
+				data_hidden = append(data_hidden, r2)
+			}
+		}
+
 		var cols []kanban.Column
-		for i, r := range data {
+		for i, r := range data_shown {
 			cols = append(cols, kanban.NewColumnFromRecord(r, i == 0))
 		}
 		board := kanban.NewDefaultBoard(cols)
@@ -151,9 +170,12 @@ func main() {
 		}
 
 		data = nil
-		for _, c := range nboard.Cols {
+		for i, c := range nboard.Cols {
 			r := ktask.NewRecord(ktask.Stage(c.List.Title))
 			r.SetEntries(kanban.ItemsToTasks(c.List.Items()))
+			if i < len(data_hidden) {
+				r.Merge(data_hidden[i])
+			}
 			data = append(data, r)
 		}
 

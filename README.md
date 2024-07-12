@@ -42,6 +42,16 @@ Although I want to avoid, there might be breaking changes (especially because of
 the very early stage of the project). In order to get notified if there are any,
 subscribe to [this issue](https://github.com/atticus-sullivan/ktask/issues/1).
 
+## Arguments
+### Kanban View
+with `-t`/`--tags` you can pre-filter the set of entries shown in the kanban
+view. You can use this option multiple times to show entries with different
+tags. If you are using tags of the form `#key=value`, filtering on `#key` will
+also show the entries that use the `#key` tag with a value assigned to. Also
+note that you don't have to (but can) include the leading `#`.
+
+Example: `ktask kanban -t grocery --tags work assets/demo.ktask`
+
 ## Acknowledgements
 The basic idea for this project was greatly inspired by the charm tutorial
 projects [`taskcli`](https://github.com/charmbracelet/taskcli) and
