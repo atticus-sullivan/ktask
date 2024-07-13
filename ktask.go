@@ -117,6 +117,7 @@ type rootCmd struct {
 type argKanban struct {
 	File string   `arg:"positional" help:"specify the file that should be read from / written to"`
 	Tags []string `arg:"--tags,-t,separate" help:"if set, only entries with this/these tags will be shown, may be specified multiple times"`
+	NoTags []string `arg:"--no-tags,-T,separate" help:"if set, entries with this/these tags will NOT be shown, may be specified multiple times"`
 }
 
 func main() {
@@ -137,12 +138,15 @@ func main() {
 
 		var data_shown []ktask.Record
 		var data_hidden []ktask.Record
-		if len(args.Kanban.Tags) == 0 {
+		if len(args.Kanban.Tags) == 0 && len(args.Kanban.NoTags) == 0 {
 			data_shown = data
 		} else {
 			for _, i := range data {
 				r1, r2 := i.SplitOnFunc(func(e *ktask.Entry) bool {
-					return slices.ContainsFunc(args.Kanban.Tags, func(s string) bool {
+					return (slices.ContainsFunc(args.Kanban.Tags, func(s string) bool {
+						t, _ := ktask.NewTagFromString(s)
+						return e.Name().Tags().Contains(t)
+					}) || len(args.Kanban.Tags) == 0) && !slices.ContainsFunc(args.Kanban.NoTags, func(s string) bool {
 						t, _ := ktask.NewTagFromString(s)
 						return e.Name().Tags().Contains(t)
 					})

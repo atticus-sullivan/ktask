@@ -32,7 +32,7 @@ three stages. This stresses, the file format does not impose any restrictions on
 the order, number and name of the stages used.
 
 ## Project state
-This project is still in a early stage. It can alreay be used (I'm doing so) but
+This project is still in a early stage. It can already be used (I'm doing so) but
 it's not well tested and there might be bugs.
 
 For open issues / planned features, see the
@@ -49,6 +49,9 @@ view. You can use this option multiple times to show entries with different
 tags. If you are using tags of the form `#key=value`, filtering on `#key` will
 also show the entries that use the `#key` tag with a value assigned to. Also
 note that you don't have to (but can) include the leading `#`.
+
+`-T`/`--no-tags` is just the oposite (hide the specified tags). Hiding `-T`)
+always takes precedence over showing (`-t`)
 
 Example: `ktask kanban -t grocery --tags work assets/demo.ktask`
 
