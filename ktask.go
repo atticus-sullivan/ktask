@@ -97,6 +97,16 @@ func writeData(destination string, data []ktask.Record) ktask.Error {
 		content.WriteRune('\n')
 	}
 
+	if _,err = os.Stat(destination); !os.IsNotExist(err) {
+		err = os.Rename(destination, destination+".bak")
+		return ktask.NewErrorWithCode(
+			ktask.NO_INPUT_ERROR,
+			"Error renaming file",
+			"File: "+destination,
+			err,
+		)
+	}
+
 	err = os.WriteFile(destination, []byte(content.String()), 0777)
 	if err != nil {
 		return ktask.NewErrorWithCode(
