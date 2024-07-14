@@ -1,12 +1,16 @@
 package ktask
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 
+	tf "github.com/jotaen/klog/klog/app/cli/terminalformat"
 	"github.com/jotaen/klog/klog/parser/txt"
 )
 
-// app/error
+var Reflower = tf.NewReflower(80, "\n")
+
 func NewParserErrors(errs []txt.Error) ParserErrors {
 	return parserErrors{errs}
 }
@@ -83,6 +87,45 @@ const (
 	LOGICAL_ERROR
 )
 
+// PrettifyParsingError turns a parsing error into a coloured and well-structured form.
+func PrettifyParsingError(err ParserErrors, styler tf.Styler) error {
+	message := ""
+	INDENT := "    "
+	for _, e := range err.All() {
+		message += "\n"
+		message += fmt.Sprintf(
+			styler.Props(tf.StyleProps{Background: tf.RED, Color: tf.RED}).Format("[")+
+				styler.Props(tf.StyleProps{Background: tf.RED, Color: tf.TEXT_INVERSE}).Format("SYNTAX ERROR")+
+				styler.Props(tf.StyleProps{Background: tf.RED, Color: tf.RED}).Format("]")+
+				styler.Props(tf.StyleProps{Color: tf.RED}).Format(" in line %d"),
+			e.LineNumber(),
+		)
+		if e.Origin() != "" {
+			message += fmt.Sprintf(
+				styler.Props(tf.StyleProps{Color: tf.RED}).Format(" of file %s"),
+				e.Origin(),
+			)
+		}
+		message += "\n"
+		message += fmt.Sprintf(
+			styler.Props(tf.StyleProps{Color: tf.SUBDUED}).Format(INDENT+"%s"),
+			// Replace all tabs with one space each, otherwise the carets might
+			// not be in line with the text anymore (since we can’t know how wide
+			// a tab is).
+			strings.Replace(e.LineText(), "\t", " ", -1),
+		) + "\n"
+		message += fmt.Sprintf(
+			styler.Props(tf.StyleProps{Color: tf.RED}).Format(INDENT+"%s%s"),
+			strings.Repeat(" ", e.Position()), strings.Repeat("^", e.Length()),
+		) + "\n"
+		message += fmt.Sprintf(
+			styler.Props(tf.StyleProps{Color: tf.YELLOW}).Format("%s"),
+			Reflower.Reflow(e.Message(), []string{INDENT}),
+		) + "\n"
+	}
+	return errors.New(message)
+}
+
 func NewErrorWithCode(code Code, message string, details string, original error) Error {
 	return AppError{code, message, details, original}
 }
@@ -112,4 +155,14 @@ type AppError struct {
 
 func NewError(message string, details string, original error) Error {
 	return NewErrorWithCode(GENERAL_ERROR, message, details, original)
+}
+
+// PrettifyAppError prints app errors including details.
+func PrettifyAppError(err Error, isDebug bool) error {
+	message := "Error: " + err.Error() + "\n"
+	message += Reflower.Reflow(err.Details(), nil)
+	if isDebug && err.Original() != nil {
+		message += "\n\nOriginal Error:\n" + err.Original().Error()
+	}
+	return errors.New(message)
 }

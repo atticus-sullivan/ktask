@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"ktask/ktask"
 	"ktask/ktask/kanban"
 	"ktask/ktask/parser"
@@ -79,12 +80,12 @@ func readData(source string) ([]ktask.Record, ktask.Error) {
 
 	records, _, errs := parser.NewSerialParser().Parse(string(content))
 	if errs != nil {
-		panic(errs)
+		return nil, ktask.NewParserErrors(errs)
 	}
 	return records, nil
 }
 
-func writeData(destination string, data []ktask.Record) ktask.Error {
+func writeData(destination string, data []ktask.Record) error {
 	var err error
 	lock := destination + ".lock"
 
@@ -97,27 +98,18 @@ func writeData(destination string, data []ktask.Record) ktask.Error {
 		content.WriteRune('\n')
 	}
 
-	if _,err = os.Stat(destination); !os.IsNotExist(err) {
+	if exists(destination) {
 		err = os.Rename(destination, destination+".bak")
-		return ktask.NewErrorWithCode(
-			ktask.NO_INPUT_ERROR,
-			"Error renaming file",
-			"File: "+destination,
-			err,
-		)
+		if err != nil {
+			return fmt.Errorf("making backup before writing failed: %w", err)
+		}
 	}
 
 	err = os.WriteFile(destination, []byte(content.String()), 0777)
 	if err != nil {
-		return ktask.NewErrorWithCode(
-			ktask.NO_INPUT_ERROR,
-			"Error writing file",
-			"Location: "+destination,
-			err,
-		)
+		return fmt.Errorf("writing output file failed. If needed you can find a backup of the original file located at the same place suffixed with .bak\n%w", err)
 	}
-	os.Remove(lock)
-	return nil
+	return os.Remove(lock)
 }
 
 type rootCmd struct {
@@ -125,25 +117,36 @@ type rootCmd struct {
 }
 
 type argKanban struct {
-	File string   `arg:"positional" help:"specify the file that should be read from / written to"`
-	Tags []string `arg:"--tags,-t,separate" help:"if set, only entries with this/these tags will be shown, may be specified multiple times"`
+	File   string   `arg:"positional" help:"specify the file that should be read from / written to"`
+	Tags   []string `arg:"--tags,-t,separate" help:"if set, only entries with this/these tags will be shown, may be specified multiple times"`
 	NoTags []string `arg:"--no-tags,-T,separate" help:"if set, entries with this/these tags will NOT be shown, may be specified multiple times"`
 }
 
 func main() {
 	var args rootCmd
+	var err error
+	var errK ktask.Error
 	arg.MustParse(&args)
 
 	switch {
 	case args.Kanban != nil:
-		var err error
+		var data []ktask.Record
 		path := args.Kanban.File
 		if path == "" {
 			path = filepath.Join(setupPath(), "tasks.ktask")
 		}
-		data, err := readData(path)
-		if err != nil {
-			panic(err)
+		data, errK = readData(path)
+		if errK != nil {
+			switch errK := errK.(type) {
+			case ktask.ParserErrors:
+				panic(ktask.PrettifyParsingError(errK, tf.NewStyler(tf.COLOUR_THEME_NO_COLOUR)))
+			case ktask.Error:
+				panic(ktask.PrettifyAppError(errK, false))
+			default:
+				if err != nil {
+					panic(err)
+				}
+			}
 		}
 
 		var data_shown []ktask.Record
@@ -172,8 +175,9 @@ func main() {
 		}
 		board := kanban.NewDefaultBoard(cols)
 
+		var rboard tea.Model
 		p := tea.NewProgram(board)
-		rboard, err := p.Run()
+		rboard, err = p.Run()
 		if err != nil {
 			panic(err)
 		}
