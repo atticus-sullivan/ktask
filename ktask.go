@@ -54,10 +54,10 @@ func exists(path string) bool {
 	return true
 }
 
-func readData(source string) ([]ktask.Record, Error) {
+func readData(source string) ([]ktask.Record, ktask.Error) {
 	lock := source + ".lock"
 	if exists(lock) {
-		return nil, NewError(
+		return nil, ktask.NewError(
 			"Lock file exists",
 			lock,
 			errors.New("file exists"),
@@ -65,8 +65,8 @@ func readData(source string) ([]ktask.Record, Error) {
 	}
 	content, err := os.ReadFile(source)
 	if err != nil {
-		return nil, NewErrorWithCode(
-			NO_INPUT_ERROR,
+		return nil, ktask.NewErrorWithCode(
+			ktask.NO_INPUT_ERROR,
 			"Error reading file",
 			"Location: "+source,
 			err,
@@ -78,17 +78,17 @@ func readData(source string) ([]ktask.Record, Error) {
 	}
 
 	records, _, errs := parser.NewSerialParser().Parse(string(content))
-	if len(errs) > 0 {
-		panic(NewParserErrors(errs))
+	if errs != nil {
+		panic(errs)
 	}
 	return records, nil
 }
 
-func writeData(destination string, data []ktask.Record) Error {
+func writeData(destination string, data []ktask.Record) ktask.Error {
 	var err error
 	lock := destination + ".lock"
 
-	ser := NewSerialiser(tf.NewStyler(tf.COLOUR_THEME_NO_COLOUR), false)
+	ser := parser.NewSerialiser(tf.NewStyler(tf.COLOUR_THEME_NO_COLOUR), false)
 	lines := parser.SerialiseRecords(ser, data...)
 
 	content := strings.Builder{}
@@ -99,8 +99,8 @@ func writeData(destination string, data []ktask.Record) Error {
 
 	err = os.WriteFile(destination, []byte(content.String()), 0777)
 	if err != nil {
-		return NewErrorWithCode(
-			NO_INPUT_ERROR,
+		return ktask.NewErrorWithCode(
+			ktask.NO_INPUT_ERROR,
 			"Error writing file",
 			"Location: "+destination,
 			err,

@@ -1,8 +1,7 @@
-package main
+package parser
 
 import (
 	"ktask/ktask"
-	"ktask/ktask/parser"
 	"time"
 
 	tf "github.com/jotaen/klog/klog/app/cli/terminalformat"
@@ -29,7 +28,7 @@ func (cs TextSerialiser) Stage(d ktask.Stage) string {
 	return cs.Styler.Props(tf.StyleProps{Color: tf.PURPLE}).Format(string(d))
 }
 
-func (cs TextSerialiser) Name(s parser.NameText) string {
+func (cs TextSerialiser) Name(s NameText) string {
 	txt := s.ToString()
 	summaryStyler := cs.Styler.Props(tf.StyleProps{Color: tf.SUBDUED})
 	txt = ktask.HashTagPattern.ReplaceAllStringFunc(txt, func(h string) string {
