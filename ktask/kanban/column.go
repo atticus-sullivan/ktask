@@ -83,13 +83,13 @@ func (c Column) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					f.description.SetValue(item.Description())
 					f.index = c.List.Index()
 					f.col = c
-					return f.Update(c.board.lastWin) // not nice to have to store lastWin
+					return f, tea.WindowSize()
 				}
 			case key.Matches(msg, keys.New):
 				f := newDefaultForm()
 				f.index = APPEND
 				f.col = c
-				return f.Update(c.board.lastWin) // not nice to have to store lastWin
+				return f, tea.WindowSize()
 			case key.Matches(msg, keys.Delete):
 				return c, c.DeleteCurrent()
 			case key.Matches(msg, keys.Prev):
@@ -132,8 +132,7 @@ func (c *Column) setSize(width, height int) {
 	s := c.getStyle()
 	hb, vb := s.GetHorizontalBorderSize(), s.GetVerticalBorderSize()
 	hp, vp := s.GetHorizontalPadding(), s.GetVerticalPadding()
-	help_h := lipgloss.Height(c.board.help.View(keys)) // TODO don't need board if board sends the appropriate WindowSize
-	c.width, c.height = width/int(c.cnt)-hp, height-help_h-vp
+	c.width, c.height = width/int(c.cnt)-hp, height-vp
 	c.List.SetSize(c.width-hb, c.height-vb)
 }
 

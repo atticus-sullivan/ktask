@@ -15,7 +15,6 @@ type Board struct {
 	Focused  int
 	Cols     []Column
 	quitting bool
-	lastWin  tea.WindowSizeMsg
 }
 
 type focus int
@@ -50,8 +49,8 @@ func (m *Board) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.lastWin = msg
 		m.help.Width = msg.Width - margin
+		msg.Height -= lipgloss.Height(m.help.View(keys))
 		for i := 0; i < len(m.Cols); i++ {
 			var res tea.Model
 			res, cmd = m.Cols[i].Update(msg)
@@ -67,10 +66,8 @@ func (m *Board) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch {
 			case key.Matches(msg, keys.Help):
 				m.help.ShowAll = !m.help.ShowAll
-				// TODO request window size once again would be nicer
-				res, c := m.Update(m.lastWin)
-				cmds = append(cmds, c)
-				return res, tea.Batch(cmds...)
+				cmds = append(cmds, tea.WindowSize())
+				return m, tea.Batch(cmds...)
 			case key.Matches(msg, keys.Quit):
 				m.quitting = true
 				return m, tea.Quit
